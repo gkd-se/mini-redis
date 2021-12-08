@@ -6,7 +6,8 @@
 //!
 //! The `clap` crate is used for parsing arguments.
 
-use mini_redis::{server, DEFAULT_PORT};
+use async_rdma::{DoubleRdmaListener, RdmaListener};
+use mini_redis::{server, DEFAULT_PORT1, DEFAULT_PORT2};
 
 use structopt::StructOpt;
 use tokio::net::TcpListener;
@@ -19,10 +20,15 @@ pub async fn main() -> mini_redis::Result<()> {
     tracing_subscriber::fmt::try_init()?;
 
     let cli = Cli::from_args();
-    let port = cli.port.as_deref().unwrap_or(DEFAULT_PORT);
+    let port1 = cli.port.as_deref().unwrap_or(DEFAULT_PORT1);
+    let port2 = cli.port.as_deref().unwrap_or(DEFAULT_PORT2);
 
     // Bind a TCP listener
-    let listener = TcpListener::bind(&format!("127.0.0.1:{}", port)).await?;
+    let listener = DoubleRdmaListener::bind(
+        &format!("127.0.0.1:{}", port1),
+        &format!("127.0.0.1:{}", port2),
+    )
+    .await?;
 
     server::run(listener, signal::ctrl_c()).await;
 

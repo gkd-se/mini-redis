@@ -69,12 +69,12 @@ struct SubscriberIterator {
 /// # drop(client);
 /// }
 /// ```
-pub fn connect<T: ToSocketAddrs>(addr: T) -> crate::Result<BlockingClient> {
+pub fn connect<T: ToSocketAddrs>(addr1: T, addr2: T) -> crate::Result<BlockingClient> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
 
-    let inner = rt.block_on(crate::client::connect(addr))?;
+    let inner = rt.block_on(crate::client::connect(addr1, addr2))?;
 
     Ok(BlockingClient { inner, rt })
 }

@@ -72,16 +72,17 @@ pub struct Message {
 /// }
 /// ```
 ///
-pub async fn connect<T: ToSocketAddrs>(addr: T) -> crate::Result<Client> {
+pub async fn connect<T: ToSocketAddrs>(addr1: T, addr2: T) -> crate::Result<Client> {
     // The `addr` argument is passed directly to `TcpStream::connect`. This
     // performs any asynchronous DNS lookup and attempts to establish the TCP
     // connection. An error at either step returns an error, which is then
     // bubbled up to the caller of `mini_redis` connect.
-    let socket = TcpStream::connect(addr).await?;
+    // let socket = TcpStream::connect(addr).await?;
+    let rdma = async_rdma::DoubleRdma::connect(addr1, addr2).await.unwrap();
 
     // Initialize the connection state. This allocates read/write buffers to
     // perform redis protocol frame parsing.
-    let connection = Connection::new(socket);
+    let connection = Connection::new(rdma);
 
     Ok(Client { connection })
 }

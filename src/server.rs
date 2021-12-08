@@ -5,6 +5,7 @@
 
 use crate::{Command, Connection, Db, DbDropGuard, Shutdown};
 
+use async_rdma::{RdmaListener, Rdma, DoubleRdma, DoubleRdmaListener};
 use std::future::Future;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
@@ -26,7 +27,7 @@ struct Listener {
     db_holder: DbDropGuard,
 
     /// TCP listener supplied by the `run` caller.
-    listener: TcpListener,
+    listener: DoubleRdmaListener,
 
     /// Limit the max number of connections.
     ///
@@ -128,7 +129,7 @@ const MAX_CONNECTIONS: usize = 250;
 ///
 /// `tokio::signal::ctrl_c()` can be used as the `shutdown` argument. This will
 /// listen for a SIGINT signal.
-pub async fn run(listener: TcpListener, shutdown: impl Future) {
+pub async fn run(listener: DoubleRdmaListener, shutdown: impl Future) {
     // When the provided `shutdown` future completes, we must send a shutdown
     // message to all active connections. We use a broadcast channel for this
     // purpose. The call below ignores the receiver of the broadcast pair, and when
@@ -287,7 +288,7 @@ impl Listener {
     /// After the second failure, the task waits for 2 seconds. Each subsequent
     /// failure doubles the wait time. If accepting fails on the 6th try after
     /// waiting for 64 seconds, then this function returns with an error.
-    async fn accept(&mut self) -> crate::Result<TcpStream> {
+    async fn accept(&mut self) -> crate::Result<DoubleRdma> {
         let mut backoff = 1;
 
         // Try to accept a few times
@@ -295,7 +296,7 @@ impl Listener {
             // Perform the accept operation. If a socket is successfully
             // accepted, return it. Otherwise, save the error.
             match self.listener.accept().await {
-                Ok((socket, _)) => return Ok(socket),
+                Ok(rdma) => return Ok(rdma),
                 Err(err) => {
                     if backoff > 64 {
                         // Accept has failed too many times. Return the error.
